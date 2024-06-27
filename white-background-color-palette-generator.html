@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>White Background Color Palette Generator</title>
+    <style>
+        /* ... (keep the existing styles) ... */
+        .color-preview {
+            background-color: white !important;
+            border: 1px solid #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <!-- ... (keep the existing HTML structure) ... -->
+
+    <script>
+        function generateColorPalette(baseColor, harmony) {
+            const harmoniousColors = generateHarmoniousColors(baseColor, harmony);
+            const primary = harmoniousColors[0];
+            const primaryHSL = hexToHSL(primary);
+
+            const palette = {
+                background: '#FFFFFF',
+                primary: primary,
+                secondary: adjustLightness(primary, primaryHSL.l > 50 ? -15 : 15),
+                accent: harmoniousColors[1] || adjustHue(primary, 180),
+                neutral: desaturate(primary, 80),
+                CTA: '#000000',
+                'CTA text': '#FFFFFF'
+            };
+
+            // Ensure primary color is not too close to white
+            if (getContrastRatio(palette.primary, palette.background) < 1.5) {
+                palette.primary = adjustLightness(palette.primary, -20);
+            }
+
+            // Generate text colors
+            palette['primary text'] = ensureContrast(primary, palette.background, 4.5);
+            palette['secondary text'] = ensureContrast(lightenColor(palette['primary text'], 30), palette.background, 4.5);
+            
+            // Negative color logic
+            const isRedish = primaryHSL.h >= 330 || primaryHSL.h <= 30;
+            palette.negative = ensureContrast(isRedish ? adjustHue(primary, 180) : '#FF3B30', palette.background, 4.5);
+
+            // Warning color logic
+            const isOrangeish = primaryHSL.h >= 20 && primaryHSL.h <= 50;
+            palette.warning = ensureContrast(isOrangeish ? adjustHue(primary, 180) : '#FF9500', palette.background, 4.5);
+
+            return palette;
+        }
+
+        function getContrastRatio(color1, color2) {
+            const l1 = getLuminance(color1);
+            const l2 = getLuminance(color2);
+            return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+        }
+
+        function getLuminance(hex) {
+            const rgb = hexToRgb(hex);
+            const a = [rgb.r, rgb.g, rgb.b].map(v => {
+                v /= 255;
+                return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+            });
+            return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
+        }
+
+        function ensureContrast(color, backgroundColor, minContrast) {
+            let currentColor = color;
+            let currentContrast = getContrastRatio(currentColor, backgroundColor);
+            const hsl = hexToHSL(currentColor);
+            const step = hsl.l > 50 ? -1 : 1;
+
+            while (currentContrast < minContrast && hsl.l >= 0 && hsl.l <= 100) {
+                hsl.l = clamp(hsl.l + step, 0, 100);
+                currentColor = HSLToHex(hsl);
+                currentContrast = getContrastRatio(currentColor, backgroundColor);
+            }
+
+            return currentColor;
+        }
+
+        // ... (keep the existing color conversion functions) ...
+
+        function updatePalette() {
+            const baseColor = document.getElementById('colorPicker').value;
+            const harmony = document.getElementById('harmonySelect').value;
+            const palette = generateColorPalette(baseColor, harmony);
+            const paletteDiv = document.getElementById('palette');
+            paletteDiv.innerHTML = '';
+
+            for (const [name, color] of Object.entries(palette)) {
+                const textColor = name.includes('text') || name === 'CTA' ? color : palette['primary text'];
+                const colorBox = document.createElement('div');
+                colorBox.className = 'color-box';
+                colorBox.innerHTML = `
+                    <div class="color-preview" style="color: ${textColor}">
+                        <span>${name}</span>
+                        <span>${color}</span>
+                    </div>
+                    <div class="color-info">
+                        <div class="color-name">${name}</div>
+                        <div class="color-value">${color}</div>
+                    </div>
+                `;
+                paletteDiv.appendChild(colorBox);
+            }
+        }
+
+        // ... (keep the existing event listeners and initial update call) ...
+    </script>
+</body>
+</html>
